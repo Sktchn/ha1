@@ -106,5 +106,73 @@ class CalculatorTest {
          assertEquals(expected, actual);
     }
 
+    /* Der Test funktioniert leider...
+    @Test
+    @DisplayName("should show result after pressing '%'-key")
+    void testPressingPercentageKey() {
+        Calculator calc = new Calculator();
+
+        calc.pressDigitKey(5);
+        calc.pressDigitKey(0);
+        calc.pressUnaryOperationKey("%");
+
+        String expected = "0.5";
+        String actual = calc.readScreen();
+
+        assertEquals(expected, actual);
+    } */
+
+    /**
+    * Rechner kann keine Prozente addieren. Der Online-Rechner kann das.
+    * Also 10 + 10 % müssten 11 ergeben, allerdings ist diese Rechnung nicht ausführbar.
+    * -> IllegalArgumentException
+    * Normaler Testlauf mit 'expected' und 'actual' daher nicht möglich.
+    * 1. Fehler 'IllegalArgumentException'.
+    * 2. Fehler Ergebnis könnte auch 10.1 sein, da 10 % = 0.1 -> 10 + 0.1 = 10.1
+     * -> Ergebnis muss 11 sein.
+    */
+    @Test
+    @DisplayName("should show result from adding percentage in number")
+    void testAddPercentage() {
+        Calculator calc = new Calculator();
+
+        calc.pressDigitKey(1);
+        calc.pressDigitKey(0);
+        calc.pressBinaryOperationKey("+");
+        calc.pressDigitKey(1);
+        calc.pressDigitKey(0);
+        calc.pressUnaryOperationKey("%");
+        calc.pressEqualsKey();
+
+        String expected = "11";
+        String actual = calc.readScreen();
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Taschenrechner kann nicht Punkt vor Strich rechnen.
+     * 1 + (4 / 2) = 3 und nicht 2.
+     * Expected: 3
+     * Actual: 2 (Was auch immer der rechnet, um auf 2 zu kommen???)
+     */
+
+    @Test
+    @DisplayName("should calculate point before line")
+    void testCalculatePointBeforeLine() {
+        Calculator calc = new Calculator();
+
+        calc.pressDigitKey(1);
+        calc.pressBinaryOperationKey("+");
+        calc.pressDigitKey(4);
+        calc.pressBinaryOperationKey("/");
+        calc.pressDigitKey(2);
+        calc.pressEqualsKey();
+
+        String expected = "3";
+        String actual = calc.readScreen();
+
+        assertEquals(expected, actual);
+    }
 }
 
