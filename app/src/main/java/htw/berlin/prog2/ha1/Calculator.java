@@ -1,18 +1,23 @@
 package htw.berlin.prog2.ha1;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Eine Klasse, die das Verhalten des Online Taschenrechners imitiert, welcher auf
  * https://www.online-calculator.com/ aufgerufen werden kann (ohne die Memory-Funktionen)
  * und dessen Bildschirm bis zu zehn Ziffern plus einem Dezimaltrennzeichen darstellen kann.
  * Enthält mit Absicht noch diverse Bugs oder unvollständige Funktionen.
+ *
+ * ArrayList für vollständige Liste von Rechenoperationen.
+ * Diese Liste wird so lange erweitert, bis die Methode pressEqualsKey() (also =) aufgerufen wird.
+ * Nur so besteht die Möglichkeit, dass die Rechenaufgabe mehrere Operationen hat und diese analysiert werden.
  */
 public class Calculator {
 
     private String screen = "0";
 
-    private double latestValue;
-
-    private String latestOperation = "";
+    private List<String> expression = new ArrayList<>();
 
     /**
      * @return den aktuellen Bildschirminhalt als String
@@ -31,7 +36,7 @@ public class Calculator {
     public void pressDigitKey(int digit) {
         if(digit > 9 || digit < 0) throw new IllegalArgumentException();
 
-        if(screen.equals("0") || latestValue == Double.parseDouble(screen)) screen = "";
+        if(screen.equals("0")) screen = "";
 
         screen = screen + digit;
     }
@@ -43,11 +48,13 @@ public class Calculator {
      * Wird daraufhin noch einmal die Taste gedrückt, dann werden auch zwischengespeicherte
      * Werte sowie der aktuelle Operationsmodus zurückgesetzt, so dass der Rechner wieder
      * im Ursprungszustand ist.
+     *
+     * Operation und Value raus, weil nicht mehr verwendet, da ArrayList.
+     * Neu: expression.clear
      */
     public void pressClearKey() {
         screen = "0";
-        latestOperation = "";
-        latestValue = 0.0;
+        expression.clear();
     }
 
     /**
@@ -59,9 +66,16 @@ public class Calculator {
      * auf dem Bildschirm angezeigt. Falls hierbei eine Division durch Null auftritt, wird "Error" angezeigt.
      * @param operation "+" für Addition, "-" für Substraktion, "x" für Multiplikation, "/" für Division
      */
+
+     /**
+      * Value und Operation raus.
+     * Neu: expression.add(screen) + (operation).
+      * Anpassung für ArrayList.
+     */
     public void pressBinaryOperationKey(String operation)  {
-        latestValue = Double.parseDouble(screen);
-        latestOperation = operation;
+        expression.add(screen);
+        expression.add(operation);
+        screen = "0";
     }
 
     /**
@@ -71,18 +85,22 @@ public class Calculator {
      * der Bildschirminhalt mit dem Ergebnis aktualisiert.
      * @param operation "√" für Quadratwurzel, "%" für Prozent, "1/x" für Inversion
      */
+
+     /**
+      * screen + 2xif raus.
+     * Neu: if screen
+      * Anpassung für ArrayList
+     */
     public void pressUnaryOperationKey(String operation) {
-        latestValue = Double.parseDouble(screen);
-        latestOperation = operation;
-        var result = switch(operation) {
+        double value = Double.parseDouble(screen);
+        double result  = switch(operation) {
             case "√" -> Math.sqrt(Double.parseDouble(screen));
             case "%" -> Double.parseDouble(screen) / 100;
             case "1/x" -> 1 / Double.parseDouble(screen);
             default -> throw new IllegalArgumentException();
         };
-        screen = Double.toString(result);
-        if(screen.equals("NaN")) screen = "Error";
-        if(screen.contains(".") && screen.length() > 11) screen = screen.substring(0, 10);
+        screen = result == Double.NaN ? "Error" : Double.toString(result);
+        if (screen.endsWith(".0")) screen = screen.substring(0, screen.length() - 2);
 
     }
 
@@ -117,17 +135,54 @@ public class Calculator {
      * Operation (ggf. inklusive letztem Operand) erneut auf den aktuellen Bildschirminhalt angewandt
      * und das Ergebnis direkt angezeigt.
      */
+
+     /**
+     * Die Switch-Cases wurden entfernt, da sie die flexibilität für komplexere Rechenaufgaben behindert.
+     * Die Funktion der Operationen wird in der Methode evaluateExpression ausgeführt.
+      * Diese Methode ruft die Methode evaluateExpression auf.
+     */
     public void pressEqualsKey() {
-        var result = switch(latestOperation) {
-            case "+" -> latestValue + Double.parseDouble(screen);
-            case "-" -> latestValue - Double.parseDouble(screen);
-            case "x" -> latestValue * Double.parseDouble(screen);
-            case "/" -> latestValue / Double.parseDouble(screen);
-            default -> throw new IllegalArgumentException();
-        };
+        expression.add(screen);
+        double result = evaluateExpression(expression);
         screen = Double.toString(result);
-        if(screen.equals("Infinity")) screen = "Error";
-        if(screen.endsWith(".0")) screen = screen.substring(0,screen.length()-2);
-        if(screen.contains(".") && screen.length() > 11) screen = screen.substring(0, 10);
+        if (screen.endsWith(".0")) screen = screen.substring(0, screen.length() - 2);
+        expression.clear();
     }
+
+    /**
+     * Diese Methode implementiert die Punkt-vor-Strich-Regel.
+     * Hier wird die Reihenfolge festgelegt, dass erst die Operatoren 'x' und '/' aus der ArrayList gerechnet wird
+     * und dann erst '+' und '-'.
+     *
+     * @param expression ist die ArrayList mit allen Zahlen und Operatoren.
+     * @return Ergebnis
+     */
+    private double evaluateExpression(List<String> expression) {
+        List<String> processedExpression = new ArrayList<>(expression);
+
+        //Erst Punkt
+        for (int i = 1; i < processedExpression.size() - 1; i += 2) {
+            String operator = processedExpression.get(i);
+            if (operator.equals("x") || operator.equals("/")) {
+                double left = Double.parseDouble(processedExpression.get(i - 1));
+                double right = Double.parseDouble(processedExpression.get(i + 1));
+                double partialResult = operator.equals("x") ? left * right : left / right;
+
+                processedExpression.set(i - 1, Double.toString(partialResult));
+                processedExpression.remove(i);
+                processedExpression.remove(i);
+                i -= 2;
+            }
+        }
+
+        //Dann Strich
+        double result = Double.parseDouble(processedExpression.get(0));
+        for (int i = 1; i < processedExpression.size(); i += 2) {
+            String operator = processedExpression.get(i);
+            double nextValue = Double.parseDouble(processedExpression.get(i + 1));
+            result = operator.equals("+") ? result + nextValue : result - nextValue;
+        }
+        return result;
+    }
+
 }
